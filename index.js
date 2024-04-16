@@ -1,13 +1,68 @@
 const express = require('express')
 const app = express()
 const port = process.env.PORT || 3000;
+const bcrypt = require('bcrypt');
 
 app.use(express.json())
-
-app.get('/', (req, res) => {
-   res.send('Main Game')
+// new user registration
+app.post('/user',async(req,res)=>{
+//check if username already exist
+let existing = await client.db("testing").collection("user").findOne({
+  username: req.body.username
 })
+if(existing){
+res.status(400).send('username already exist')
+}else{
 
+
+//insertOne the registration to mongo
+const hash = bcrypt.hashSync(req.body.password,10);
+   let result = await client.db("testing").collection("user").insertOne(
+  {
+     username:  req.body.username,
+     password: hash,
+     name: req.body.name,
+     email: req.body.email,
+
+  }
+)
+res.send(result)
+}
+})
+// user login api
+app.post('/login',async(req,res)=>{
+   //step #1:
+let result = await client.db("testing").collection("user").findOne(
+    {
+      username:req.body.username
+
+    }
+  )
+   
+  
+  if(result){
+     //step #2:if user exist, check password 
+     console.log(req.body.password)
+     console.log(result.password)
+
+    if( bcrypt.compareSync(req.body.password, result.password)== true){// check if pass same with hash
+      //password is correct
+      res.send('welcome back '+ result.name)
+    }else{
+      //password is wrong
+      res.send('wrong password')
+    }
+
+
+} else{
+    //step3: if user not found
+    res.send("Username is not found")
+
+    }
+
+
+
+})
 app.listen(port, () => {
    console.log(`Example app listening on port ${port}`)
 })
@@ -62,14 +117,14 @@ async function run() {
     // console.log(updated)
 
     //deleteone
-    let deleted=await client.db('testing').collection('subject').deleteOne()
-    {
-      _id: new ObjectId('660b6db5fc1e24180f921e22')
+    //let deleted=await client.db('testing').collection('subject').deleteOne()
+    //{
+      //_id: new ObjectId('660b6db5fc1e24180f921e22')
 
-    }
+    //}
   } finally {
     // Ensures that the client will close when you finish/error
-    await client.close();
+    //await client.close();
   }
 }
 run().catch(console.dir);
