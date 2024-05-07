@@ -2,6 +2,41 @@ const express = require('express')
 const app = express()
 const port = process.env.PORT || 3000;
 const bcrypt = require('bcrypt');
+var jwt = require('jsonwebtoken');
+
+// app.get('/',(req,res)=>{
+//    res.send('Hello World');
+// });
+
+   app.get('/user/:id',async(req,res)=>{
+  
+   let auth = req.headers.authorization
+  console.log(auth)
+
+   let authSplitted = auth.split(' ')
+   console.log(authSplitted)
+ 
+   let token = authSplitted[1]
+   console.log(token)
+   let decoded = jwt.verify(token, 'lemah');
+   console.log(decoded)
+
+   if(decoded._id != req.params.id){
+    res.status(401).send('Unauthorized Access')
+   }else{
+    let result= await client.db("testing").collection("item").findOne({
+      _id: new ObjectId(req.params.id)
+    })
+
+    
+  
+   res.send(result)
+  
+  
+  }
+  })
+
+
 
 app.use(express.json())
 // new user registration
@@ -32,6 +67,7 @@ res.send(result)
 // user login api
 app.post('/login',async(req,res)=>{
    //step #1:
+   
 let result = await client.db("testing").collection("user").findOne(
     {
       username:req.body.username
@@ -47,7 +83,10 @@ let result = await client.db("testing").collection("user").findOne(
 
     if( bcrypt.compareSync(req.body.password, result.password)== true){// check if pass same with hash
       //password is correct
-      res.send('welcome back '+ result.name)
+      var token = jwt.sign({ _id: result._id ,username: result.username , name:result.name}, 
+        'lemah')
+      ;
+      res.send(token)
     }else{
       //password is wrong
       res.send('wrong password')
@@ -86,6 +125,23 @@ async function run() {
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
+   
+    function verifyToken(req,res,next){
+        const authHeader = req.headers.authorization
+        const token = authHeader && authHeader.split(' ')[1]
+
+        if (token == null)return res.sendStatus(401)
+
+        jwt.verify(token, "lemah",(err,decoded)=>{
+          console.log(err)
+
+          if(err)return res.sendStatus(403)
+            req.identify=decoded
+          next()
+        })
+
+    }
+   
     //insert one
     //  let result = await client.db('testing').collection('subject').insertOne({
     //    subject:'Berg 123',
@@ -103,6 +159,7 @@ async function run() {
    // console.log(subject)
 
   //updatedone
+  
     // let updated= await client.db('testing').collection('subject').updateOne(
     //   {code:'Berr 123'},
     //   {
